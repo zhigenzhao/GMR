@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from general_motion_retargeting.utils.rot_utils import quat_mul_np
 
 try:
     import xrobotoolkit_sdk as xrt_sdk
@@ -19,14 +20,6 @@ XRT_JOINT_NAMES = [
     "Left_Wrist", "Right_Wrist", "Left_Hand", "Right_Hand"
 ]
 
-# Coordinate transformation from headset frame to world frame
-# This transforms the XR coordinate system to a standard world coordinate system
-R_HEADSET_TO_WORLD = np.array([
-    [0, 0, -1],
-    [-1, 0, 0],
-    [0, 1, 0],
-])
-
 
 def transform_xr_pose_to_world(position, quaternion):
     """
@@ -40,29 +33,18 @@ def transform_xr_pose_to_world(position, quaternion):
         position_world: Position in world frame [x, y, z]
         quaternion_world: Quaternion in world frame [qw, qx, qy, qz]
     """
+
+    R_GMR = np.array([
+        [1, 0, 0],
+        [0, 0, -1],
+        [0, 1, 0]
+    ])
     # Transform position from headset to world
-    position_world = R_HEADSET_TO_WORLD @ position
+    # position_world = R_HEADSET_TO_WORLD @ position
+    position_world = position @ R_GMR.T
 
-    # Transform orientation from headset to world: R_quat * headset_quat * R_quat_conj
-    R_scipy = R.from_matrix(R_HEADSET_TO_WORLD)
-    R_quat_scipy = R_scipy.as_quat()  # [qx, qy, qz, qw]
-    R_quat = np.array([R_quat_scipy[3], R_quat_scipy[0], R_quat_scipy[1], R_quat_scipy[2]])  # [qw, qx, qy, qz]
-
-    # Quaternion multiplication: R * q * R_conj
-    R_quat_conj = np.array([R_quat[0], -R_quat[1], -R_quat[2], -R_quat[3]])
-
-    # quat_multiply(q1, q2) where q1 and q2 are [qw, qx, qy, qz]
-    def quat_multiply(q1, q2):
-        w1, x1, y1, z1 = q1
-        w2, x2, y2, z2 = q2
-        return np.array([
-            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
-        ])
-
-    quaternion_world = quat_multiply(quat_multiply(R_quat, quaternion), R_quat_conj)
+    R_quat = R.from_matrix(R_GMR).as_quat(scalar_first=True)
+    quaternion_world = quat_mul_np(R_quat, quaternion, scalar_first=True)
 
     # Normalize quaternion
     quaternion_world = quaternion_world / np.linalg.norm(quaternion_world)
