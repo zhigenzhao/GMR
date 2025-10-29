@@ -65,6 +65,7 @@ IK_CONFIG_DICT = {
     },
     "xrt":{
         "unitree_g1": IK_CONFIG_ROOT / "xrt_to_g1.json",
+        "booster_t1_29dof": IK_CONFIG_ROOT / "xrt_to_t1_29dof.json",
     },
 }
 

@@ -166,7 +166,7 @@ if __name__ == "__main__":
                     human_motion_data=retarget.scaled_human_data,
                     human_pos_offset=np.array([0.0, 0.0, 0.0]),
                     show_human_body_name=False,
-                    rate_limit=args.rate_limit,
+                    rate_limit=args.rate_limit or args.record_video,
                 )
 
             # Save frame if requested
@@ -182,8 +182,8 @@ if __name__ == "__main__":
                 fps_counter = 0
                 fps_start_time = current_time
 
-            # Rate limiting if enabled
-            if args.rate_limit and not args.visualize:
+            # Rate limiting if enabled (or when recording video without visualization)
+            if (args.rate_limit or args.record_video) and not args.visualize:
                 time.sleep(1/30)
 
         except KeyboardInterrupt:
