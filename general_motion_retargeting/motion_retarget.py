@@ -1,11 +1,14 @@
 
+import json
+
 import mink
 import mujoco as mj
 import numpy as np
-import json
-from scipy.spatial.transform import Rotation as R
-from .params import ROBOT_XML_DICT, IK_CONFIG_DICT
 from rich import print
+from scipy.spatial.transform import Rotation as R
+
+from .params import IK_CONFIG_DICT, ROBOT_XML_DICT
+
 
 class GeneralMotionRetargeting:
     """General Motion Retargeting (GMR).
@@ -286,7 +289,7 @@ class GeneralMotionRetargeting:
     def offset_human_data_to_ground(self, human_data):
         """find the lowest point of the human data and offset the human data to the ground"""
         offset_human_data = {}
-        ground_offset = 0.1
+        ground_offset = 0.0
         lowest_pos = np.inf
 
         for body_name in human_data.keys():
