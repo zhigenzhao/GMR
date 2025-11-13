@@ -3,8 +3,10 @@ import pathlib
 import time
 import signal
 import sys
+from datetime import datetime
 
 import numpy as np
+import xrobotoolkit_sdk as xrt_sdk
 
 from general_motion_retargeting import GeneralMotionRetargeting as GMR
 from general_motion_retargeting import RobotMotionViewer
@@ -16,6 +18,11 @@ from rich import print
 running = True
 xrt_client = None
 robot_motion_viewer = None
+
+# Global variables for button-controlled recording
+prev_b_button_state = False
+recording = False
+recording_start_time = None
 
 
 def signal_handler(_sig, _frame):
@@ -142,10 +149,50 @@ if __name__ == "__main__":
     fps_display_interval = 2.0  # Display FPS every 2 seconds
 
     print("[green]Starting real-time retargeting! Press Ctrl+C to stop.[/green]")
+    if args.save_path is not None:
+        print("[cyan]Press B button on right controller to start/stop XRT data recording.[/cyan]")
 
     # Main loop
     while running:
         try:
+            # Check B button state for recording control
+            curr_b_button_state = xrt_sdk.get_B_button()
+
+            # Detect rising edge (button press)
+            if curr_b_button_state and not prev_b_button_state:
+                if not recording:
+                    # Start recording XRT data
+                    recording = True
+                    recording_start_time = datetime.now()
+                    timestamp_str = recording_start_time.strftime("%Y%m%d_%H%M%S")
+                    save_filename_xrt = f"recording_{timestamp_str}.pkl"
+
+                    if args.save_path is not None:
+                        print(f"[green bold]🔴 Recording started: {timestamp_str}[/green bold]")
+                        print(f"  → XRT data will be saved to: {save_filename_xrt}")
+                    else:
+                        print(f"[yellow]⚠️  B button pressed but --save_path not enabled. No data will be saved.[/yellow]")
+                else:
+                    # Stop recording XRT data
+                    recording = False
+                    frames_captured = len(captured_frames)
+
+                    # Save XRT data if enabled
+                    if args.save_path is not None and frames_captured > 0:
+                        timestamp_str = recording_start_time.strftime("%Y%m%d_%H%M%S")
+                        save_filename_xrt = f"recording_{timestamp_str}.pkl"
+                        print(f"[yellow bold]⏹️  Recording stopped. Saving {frames_captured} frames to {save_filename_xrt}...[/yellow bold]")
+                        save_xrt_file(captured_frames, save_filename_xrt)
+                        print(f"[green]✓ Saved XRT data to {save_filename_xrt}[/green]")
+                        captured_frames.clear()
+                    elif args.save_path is not None and frames_captured == 0:
+                        print(f"[yellow]⏹️  Recording stopped (no frames captured)[/yellow]")
+                    else:
+                        print(f"[yellow]⏹️  Recording stopped (--save_path not enabled)[/yellow]")
+
+            # Update previous button state
+            prev_b_button_state = curr_b_button_state
+
             # Get current body tracking data
             frame_data = get_xrt_frame_realtime(xrt_client)
 
@@ -169,8 +216,8 @@ if __name__ == "__main__":
                     rate_limit=args.rate_limit or args.record_video or args.save_path is not None,
                 )
 
-            # Save frame if requested
-            if args.save_path is not None:
+            # Save frame if requested and recording is active
+            if args.save_path is not None and recording:
                 captured_frames.append(frame_data)
 
             # FPS measurement
