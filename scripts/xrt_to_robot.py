@@ -75,6 +75,7 @@ if __name__ == "__main__":
         actual_human_height=actual_human_height,
         src_human="xrt",
         tgt_robot=args.robot,
+        auto_ground_offset=0.0,
     )
 
     robot_motion_viewer = RobotMotionViewer(

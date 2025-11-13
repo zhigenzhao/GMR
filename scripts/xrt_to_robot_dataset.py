@@ -1,20 +1,20 @@
 import argparse
-import pathlib
-import os
+import gc
 import multiprocessing as mp
+import os
+import pathlib
+import pickle
+import time
 
 import numpy as np
+import psutil
+import torch
 from natsort import natsorted
 from rich import print
-import torch
-import pickle
-import gc
-import time
-import psutil
 
 from general_motion_retargeting import GeneralMotionRetargeting as GMR
-from general_motion_retargeting.utils.xrt import load_xrt_file
 from general_motion_retargeting.kinematics_model import KinematicsModel
+from general_motion_retargeting.utils.xrt import load_xrt_file
 
 
 def check_memory(threshold_gb=30):
@@ -78,6 +78,7 @@ def process_file(xrt_file_path, tgt_file_path, tgt_robot, tgt_folder, total_file
             src_human="xrt",
             tgt_robot=tgt_robot,
             actual_human_height=actual_human_height,
+            auto_ground_offset=0.0,
         )
     except Exception as e:
         print(f"[ERROR] Initializing retargeter for {xrt_file_path}: {e}")
