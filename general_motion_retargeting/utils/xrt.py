@@ -73,7 +73,10 @@ def transform_xr_pose_to_world(position, quaternion):
     # position_world = R_HEADSET_TO_WORLD @ position
     position_world = position @ R_GMR.T
 
-    R_quat = R.from_matrix(R_GMR).as_quat(scalar_first=True)
+    # as_quat() returns (x,y,z,w) by default in scipy 1.10.1
+    # Convert to (w,x,y,z) for scalar_first=True compatibility
+    R_quat_xyzw = R.from_matrix(R_GMR).as_quat()
+    R_quat = np.array([R_quat_xyzw[3], R_quat_xyzw[0], R_quat_xyzw[1], R_quat_xyzw[2]])
     quaternion_world = quat_mul_np(R_quat, quaternion, scalar_first=True)
 
     # Normalize quaternion

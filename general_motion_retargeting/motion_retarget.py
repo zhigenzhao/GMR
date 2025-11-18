@@ -127,9 +127,9 @@ class GeneralMotionRetargeting:
                 )
                 self.human_body_to_task1[body_name] = task
                 self.pos_offsets1[body_name] = np.array(pos_offset) - self.ground
-                self.rot_offsets1[body_name] = R.from_quat(
-                    rot_offset, scalar_first=True
-                )
+                # Convert rot_offset from (w,x,y,z) to (x,y,z,w) for scipy 1.10.1
+                rot_offset_xyzw = np.array([rot_offset[1], rot_offset[2], rot_offset[3], rot_offset[0]])
+                self.rot_offsets1[body_name] = R.from_quat(rot_offset_xyzw)
                 self.tasks1.append(task)
                 self.task_errors1[task] = []
         
@@ -145,9 +145,9 @@ class GeneralMotionRetargeting:
                 )
                 self.human_body_to_task2[body_name] = task
                 self.pos_offsets2[body_name] = np.array(pos_offset) - self.ground
-                self.rot_offsets2[body_name] = R.from_quat(
-                    rot_offset, scalar_first=True
-                )
+                # Convert rot_offset from (w,x,y,z) to (x,y,z,w) for scipy 1.10.1
+                rot_offset_xyzw = np.array([rot_offset[1], rot_offset[2], rot_offset[3], rot_offset[0]])
+                self.rot_offsets2[body_name] = R.from_quat(rot_offset_xyzw)
                 self.tasks2.append(task)
                 self.task_errors2[task] = []
 
@@ -277,12 +277,18 @@ class GeneralMotionRetargeting:
             pos, quat = human_data[body_name]
             offset_human_data[body_name] = [pos, quat]
             # apply rotation offset first
-            updated_quat = (R.from_quat(quat, scalar_first=True) * rot_offsets[body_name]).as_quat(scalar_first=True)
+            # Convert quat from (w,x,y,z) to (x,y,z,w) for scipy 1.10.1
+            quat_xyzw = np.array([quat[1], quat[2], quat[3], quat[0]])
+            updated_rot = R.from_quat(quat_xyzw) * rot_offsets[body_name]
+            updated_quat_xyzw = updated_rot.as_quat()
+            # Convert back to (w,x,y,z)
+            updated_quat = np.array([updated_quat_xyzw[3], updated_quat_xyzw[0], updated_quat_xyzw[1], updated_quat_xyzw[2]])
             offset_human_data[body_name][1] = updated_quat
             
             local_offset = pos_offsets[body_name]
             # compute the global position offset using the updated rotation
-            global_pos_offset = R.from_quat(updated_quat, scalar_first=True).apply(local_offset)
+            # updated_quat is in (w,x,y,z), convert to (x,y,z,w) for scipy 1.10.1
+            global_pos_offset = R.from_quat(updated_quat_xyzw).apply(local_offset)
             
             offset_human_data[body_name][0] = pos + global_pos_offset
            
